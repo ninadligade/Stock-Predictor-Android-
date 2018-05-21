@@ -6,8 +6,9 @@ from keras.layers.core import Dense, Dropout
 from keras.layers.recurrent import LSTM
 from iexfinance import get_historical_data
 import matplotlib.pyplot as plt2
+import json
 
-COMPANY_LIST = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'FB']
+COMPANY_LIST = ['AAPL']#, 'GOOGL', 'MSFT', 'AMZN', 'FB']
 
 
 def get_stock_data(stock_name="AAPL", normalized=0):
@@ -53,23 +54,24 @@ def build_model2(layers):
     return model
 
 
-if __name__ == '__main__':
-    stock_name = "AAPL"
+def writeToJSONfile(path, filename, data):
+    fullpath = './' + path + '/' + filename + '.json'
+    with open(fullpath, 'a') as fp:
+        json.dump(data, fp)
+
+
+def stockHelper(stock_name):
     df = get_stock_data(stock_name)
-    # print(df.tail())
+
     today = datetime.date.today()
-    file_name = stock_name + '_stock_%s.csv' % today
-    df.to_csv(file_name)
+    # file_name = stock_name + '_stock_%s.csv' % today
+    # df.to_csv(file_name)
     df['high'] = df['high'] / 1000
     df['open'] = df['open'] / 1000
     df['close'] = df['close'] / 1000
-    # print(df.head(5))
+
     window = 5
     X_train, y_train, X_test, y_test = load_data(df[::-1], window)
-    # print("X_train", X_train.shape)
-    # print("y_train", y_train.shape)
-    # print("X_test", X_test.shape)
-    # print("y_test", y_test.shape)
     model = build_model2([3, 5, 1])
     model.fit(
         X_train,
@@ -85,13 +87,29 @@ if __name__ == '__main__':
     diff = []
     ratio = []
     p = model.predict(X_test)
+    print(p[len(y_test) - 1][0])
     for u in range(len(y_test)):
         pr = p[u][0]
         ratio.append((y_test[u] / pr) - 1)
         diff.append(abs(y_test[u] - pr))
-        # print(u, y_test[u], pr, (y_test[u]/pr)-1, abs(y_test[u]- pr))
-    print(p)
+
     # plt2.plot(p, color='red', label='prediction')
     # plt2.plot(y_test, color='blue', label='y_test')
     # plt2.legend(loc='upper left')
     # plt2.show()
+    # plt2.close()
+    return p[len(y_test) - 1][0]
+
+
+if __name__ == '__main__':
+    stock_name = "AAPL"
+    result = {}
+    for stock in COMPANY_LIST:
+        value = stockHelper(stock)
+        data = {}
+        data[stock] = str(value)
+        result[stock] = str(value)
+        # writeToJSONfile('./','financial', data)
+        print("value = ", value * 1000)
+    print(result)
+    writeToJSONfile('./', 'financial', result)
